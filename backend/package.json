@@ -1,0 +1,35 @@
+{
+  "name": "acm-exec-portal",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node --env-file=.env build/index.js",
+    "dev": "tsx --env-file=.env index.ts"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@octokit/types": "^16.0.0",
+    "@types/node": "^25.9.2",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.22.4",
+    "typescript": "^6.0.3"
+  },
+  "dependencies": {
+    "@aws-sdk/client-ses": "^3.1068.0",
+    "@aws-sdk/client-sqs": "^3.1073.0",
+    "@octokit/rest": "^22.0.1",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "google-auth-library": "^10.7.0",
+    "googleapis": "^173.0.0",
+    "pg": "^8.22.0",
+    "typedi": "^0.10.0"
+  }
+}
