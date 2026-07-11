@@ -1,7 +1,7 @@
-import { ACMCommunity, ACMPosition, ACMTeam } from "./ACM.js";
+import { ACMCommunity, ACMPosition, ACMTeam } from "./ACM.ts";
 
 export interface Member {
-    id?: number,
+    id: number,
     firstName: string,
     lastName: string,
     team: ACMTeam,

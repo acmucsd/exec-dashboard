@@ -1,18 +1,35 @@
 {
-  "compilerOptions": {
-    "target": "ES2022",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "emitDecoratorMetadata": true,
-    "experimentalDecorators": true,
-    "declaration": true,
-    "outDir": "./build",
-    "strict": false,
-    "strictPropertyInitialization": false,
-    "skipLibCheck": true,
-    "ignoreDeprecations": "6.0"
-  },
-  "include": ["index.ts", "src/db.ts", "src/types/*.ts"]
+	"compilerOptions": {
+		"module": "nodenext",
+		"moduleResolution": "nodenext",
+		"resolvePackageJsonExports": true,
+		"esModuleInterop": true,
+		"isolatedModules": true,
+		"declaration": true,
+		"removeComments": true,
+		"emitDecoratorMetadata": true,
+		"experimentalDecorators": true,
+		"allowSyntheticDefaultImports": true,
+		"target": "ES2023",
+		"sourceMap": true,
+		"outDir": "./dist",
+		"incremental": true,
+		"skipLibCheck": true,
+		"strictNullChecks": true,
+		"forceConsistentCasingInFileNames": true,
+		"noImplicitAny": false,
+		"strictBindCallApply": false,
+		"noFallthroughCasesInSwitch": false,
+		"strictPropertyInitialization": false,
+        "noEmit": true,
+        "allowImportingTsExtensions": true,
+        "paths": {
+            "@t/*": ["./src/types/*"],
+            "@lib/*": ["./src/lib/*"],
+            "@modules/*": ["./src/modules/*"],
+            "@domain/*": ["./src/modules/domain/*"],
+            "@database/*": ["./src/modules/database/*"],
+            "@workflow/*": ["./src/modules/workflow/*"]
+        }
+	}
 }
