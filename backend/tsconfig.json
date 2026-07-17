@@ -21,8 +21,7 @@
 		"strictBindCallApply": false,
 		"noFallthroughCasesInSwitch": false,
 		"strictPropertyInitialization": false,
-        "noEmit": true,
-        "allowImportingTsExtensions": true,
+        "noEmit": false,
         "paths": {
             "@t/*": ["./src/types/*"],
             "@lib/*": ["./src/lib/*"],

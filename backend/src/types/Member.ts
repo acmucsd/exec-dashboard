@@ -1,4 +1,4 @@
-import { ACMCommunity, ACMPosition, ACMTeam } from "./ACM.ts";
+import { ACMCommunity, ACMPosition, ACMTeam } from "./ACM";
 
 export interface Member {
     id: number,
