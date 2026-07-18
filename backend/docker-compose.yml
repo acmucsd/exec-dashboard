@@ -1,0 +1,34 @@
+services:
+  exec-dashboard-db:
+    container_name: exec-dashboard-db
+    image: postgres:latest
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    ports:
+      - "5433:5432"
+    restart: always
+  kartana-service:
+    container_name: kartana-service
+    image: acmucsd/kartana:latest
+    env_file: 
+    - .env.kartana
+  membership-portal-service:
+    container_name: membership-portal-service
+    image: acmucsd/membership-portal-api:latest
+    env_file: 
+    - .env.membership
+    depends_on:
+    - rds.membership.local
+  rds.membership.local:
+    container_name: rds.membership.local
+    image: postgres:17.6
+    restart: always
+    ports:
+      - '5434:5432'
+    env_file:
+    - .env.membership
+  # exec-dashboard-service:
+  #  container_name: exec-dashboard-service
+  #  build: ./backend/
