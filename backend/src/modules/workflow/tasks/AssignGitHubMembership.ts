@@ -17,6 +17,7 @@ export default class AssignGitHubMembership extends Task {
     async run(member: Member): Promise<TaskResult> {
         const teamSlug = GITHUB_TEAM[member.team];
         const teamRole = member.position == ACMPosition.VP ? 'maintainer' : 'member';
+        const orgRole = member.position == ACMPosition.VP ? 'admin' : 'member';
         const org = process.env.GITHUB_ORG!;
 
         if (!teamSlug) {
@@ -29,7 +30,7 @@ export default class AssignGitHubMembership extends Task {
             await githubClient.rest.orgs.setMembershipForUser({
                 org,
                 username: member.githubUsername,
-                role: 'member',
+                role: orgRole,
             });
 
             await githubClient.rest.teams.addOrUpdateMembershipForUserInOrg({
