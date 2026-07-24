@@ -9,6 +9,7 @@ export interface Member {
     yearGraduating: number,
     email: string,
     acmEmail: string | null,
+    setupPassword?: string | null,
     githubUsername: string,
     discordUserId: string,
 }

@@ -2,8 +2,8 @@ import { githubClient } from '../clients/github'
 import { GITHUB_TEAM } from '../constants/github'
 import { toError } from '@lib/error'
 import { ACMPosition } from '@t/ACM'
+import { Member } from '@t/Member'
 import { Task, TaskResult } from '@modules/workflow/types/Task'
-import { WorkflowContext } from '../types/WorkflowContext'
 
 /*
 Returns true if member is successfully invited to the GitHub org and apply teams.
@@ -14,8 +14,7 @@ export default class AssignGitHubMembership extends Task {
 
     // UNTESTED
     // IDK IF THIS WORKS YET
-    async run(ctx: WorkflowContext): Promise<TaskResult> {
-        const { member } = ctx;
+    async run(member: Member): Promise<TaskResult> {
         const teamSlug = GITHUB_TEAM[member.team];
         const teamRole = member.position == ACMPosition.VP ? 'maintainer' : 'member';
         const org = process.env.GITHUB_ORG!;
