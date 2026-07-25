@@ -13,12 +13,6 @@ help: ## Show available commands
 	@printf "Targets:\n"
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z0-9_-]+:.*## / {printf "  %-12s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
-check-env: ## Validate required env files exist
-	@test -f "$(ENV_FILE)" || (printf "Missing %s\n" "$(ENV_FILE)" && exit 1)
-	@test -f "backend/.env" || (printf "Missing backend/.env\n" && exit 1)
-	@set -a; . "$(ENV_FILE)"; set +a; test -f "$${KARTANA_ENV_FILE:-../kartana/.env}" || (printf "Missing %s\n" "$${KARTANA_ENV_FILE:-../kartana/.env}" && exit 1)
-	@set -a; . "$(ENV_FILE)"; set +a; test -f "$${MEMBERSHIP_PORTAL_ENV_FILE:-../membership-portal/.env}" || (printf "Missing %s\n" "$${MEMBERSHIP_PORTAL_ENV_FILE:-../membership-portal/.env}" && exit 1)
-
 up: check-env ## Rebuild exec images; run remote Kartana/Membership Portal images
 	$(COMPOSE_BASE) up -d --build
 
