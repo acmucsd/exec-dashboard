@@ -12,8 +12,6 @@ Returns false otherwise.
 export default class AssignGitHubMembership extends Task {
     label = 'Invite member to GitHub org and assign teams';
 
-    // UNTESTED
-    // IDK IF THIS WORKS YET
     async run(member: Member): Promise<TaskResult> {
         const teamSlug = GITHUB_TEAM[member.team];
         const teamRole = member.position == ACMPosition.VP ? 'maintainer' : 'member';

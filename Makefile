@@ -1,7 +1,7 @@
 ENV_FILE ?= .env.compose
 
 COMPOSE_BASE = docker compose --env-file $(ENV_FILE) -f docker-compose.yml
-COMPOSE_BUILD = docker compose --env-file $(ENV_FILE) -f docker-compose.yml -f docker-compose.build.yml
+COMPOSE_BUILD = docker compose --env-file $(ENV_FILE) -f docker-compose.yml -f docker-compose.local.yml
 
 .DEFAULT_GOAL := help
 

@@ -1,7 +1,7 @@
 import { google, gmail_v1, admin_directory_v1 } from 'googleapis'
 
 const auth = new google.auth.GoogleAuth({
-    keyFile: process.env.GOOGLE_CREDENTIALS_PATH!,
+    credentials: JSON.parse(process.env.GOOGLE_CREDENTIALS!),
     scopes: [
         'https://www.googleapis.com/auth/admin.directory.user',
         'https://www.googleapis.com/auth/admin.directory.group',
