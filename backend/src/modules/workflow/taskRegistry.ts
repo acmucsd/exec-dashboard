@@ -3,7 +3,7 @@ import AssignGoogleWorkspaceGroups from "./tasks/AssignGoogleWorkspaceGroups";
 import AssignGoogleWorkspaceOrgUnit from "./tasks/AssignGoogleWorkspaceOrgUnit";
 import CreateOrgEmail from "./tasks/CreateOrgEmail";
 import SendAccountSetupEmail from "./tasks/SendAccountSetupEmail";
-import AssignKartanaRoles from "./tasks/TODO/AssignKartanaRoles";
+import AssignKartanaRoles from "./tasks/AssignKartanaRoles";
 import SubscribeKartanaMeetingPings from "./tasks/TODO/SubscribeKartanaMeetingPings";
 import GrantMembershipPortalPerms from "./tasks/TODO/GrantMembershipPortalPerms";
 import InviteToVaultwarden from "./tasks/TODO/InviteToVaultwarden";

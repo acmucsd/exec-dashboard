@@ -26,7 +26,12 @@ services:
     environment:
       PORT: ${EXEC_BACKEND_PORT:-3001}
       NODE_ENV: production
-      POSTGRES_URL: postgres://${POSTGRES_USER:-exec_dashboard}:${POSTGRES_PASSWORD:-exec_dashboard}@postgres:5432/${POSTGRES_DB:-exec_dashboard}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-exec_dashboard}
+      POSTGRES_USER: ${POSTGRES_USER:-exec_dashboard}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_URL: postgres://${POSTGRES_USER:-exec_dashboard}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-exec_dashboard}
       KARTANA_INTERNAL_URL: http://kartana:${KARTANA_INTERNAL_PORT:-8080}
       MEMBERSHIP_PORTAL_INTERNAL_URL: http://membership-portal:${MEMBERSHIP_PORTAL_INTERNAL_PORT:-8080}
     depends_on:
@@ -58,7 +63,7 @@ services:
     image: ${KARTANA_IMAGE:-ghcr.io/acmucsd/kartana:latest}
     restart: unless-stopped
     env_file:
-      - ${KARTANA_ENV_FILE:-../kartana/.env}
+      - ${KARTANA_ENV_FILE:-./.env.kartana}
     expose:
       - ${KARTANA_INTERNAL_PORT:-8080}
     networks:
@@ -68,13 +73,13 @@ services:
     image: ${MEMBERSHIP_PORTAL_IMAGE:-ghcr.io/acmucsd/membership-portal-api:latest}
     restart: unless-stopped
     env_file:
-      - ${MEMBERSHIP_PORTAL_ENV_FILE:-../membership-portal/.env}
+      - ${MEMBERSHIP_PORTAL_ENV_FILE:-./.env.membership}
     environment:
       RDS_HOST: postgres
       RDS_PORT: 5432
       RDS_DATABASE: ${POSTGRES_DB:-exec_dashboard}
       RDS_USER: ${POSTGRES_USER:-exec_dashboard}
-      RDS_PASSWORD: ${POSTGRES_PASSWORD:-exec_dashboard}
+      RDS_PASSWORD: ${POSTGRES_PASSWORD}
     depends_on:
       postgres:
         condition: service_healthy

@@ -3,3 +3,11 @@
 # Local Docker state and secrets
 .docker-data/
 .env.compose
+
+.env
+.env.development.local
+.env.test.local
+.env.production.local
+.env.local
+.env.kartana
+.env.membership
