@@ -1,0 +1,88 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-exec_dashboard}
+      POSTGRES_USER: ${POSTGRES_USER:-exec_dashboard}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-exec_dashboard}
+    volumes:
+      - ./.docker-data/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-exec_dashboard} -d ${POSTGRES_DB:-exec_dashboard}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks:
+      - acm_internal
+
+  exec-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    environment:
+      PORT: ${EXEC_BACKEND_PORT:-3001}
+      NODE_ENV: production
+      POSTGRES_URL: postgres://${POSTGRES_USER:-exec_dashboard}:${POSTGRES_PASSWORD:-exec_dashboard}@postgres:5432/${POSTGRES_DB:-exec_dashboard}
+      KARTANA_INTERNAL_URL: http://kartana:${KARTANA_INTERNAL_PORT:-8080}
+      MEMBERSHIP_PORTAL_INTERNAL_URL: http://membership-portal:${MEMBERSHIP_PORTAL_INTERNAL_PORT:-8080}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kartana:
+        condition: service_started
+      membership-portal:
+        condition: service_started
+    ports:
+      - ${EXEC_BACKEND_HOST_PORT:-3001}:${EXEC_BACKEND_PORT:-3001}
+    networks:
+      - acm_internal
+
+  exec-frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      exec-backend:
+        condition: service_started
+    ports:
+      - ${EXEC_FRONTEND_HOST_PORT:-5173}:80
+    networks:
+      - acm_internal
+
+  kartana:
+    image: ${KARTANA_IMAGE:-ghcr.io/acmucsd/kartana:latest}
+    restart: unless-stopped
+    env_file:
+      - ${KARTANA_ENV_FILE:-../kartana/.env}
+    expose:
+      - ${KARTANA_INTERNAL_PORT:-8080}
+    networks:
+      - acm_internal
+
+  membership-portal:
+    image: ${MEMBERSHIP_PORTAL_IMAGE:-ghcr.io/acmucsd/membership-portal-api:latest}
+    restart: unless-stopped
+    env_file:
+      - ${MEMBERSHIP_PORTAL_ENV_FILE:-../membership-portal/.env}
+    environment:
+      RDS_HOST: postgres
+      RDS_PORT: 5432
+      RDS_DATABASE: ${POSTGRES_DB:-exec_dashboard}
+      RDS_USER: ${POSTGRES_USER:-exec_dashboard}
+      RDS_PASSWORD: ${POSTGRES_PASSWORD:-exec_dashboard}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    expose:
+      - ${MEMBERSHIP_PORTAL_INTERNAL_PORT:-8080}
+    networks:
+      - acm_internal
+
+networks:
+  acm_internal:
+    driver: bridge

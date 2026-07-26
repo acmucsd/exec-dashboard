@@ -1,1 +1,5 @@
 .DS_Store
+
+# Local Docker state and secrets
+.docker-data/
+.env.compose
