@@ -1,0 +1,12 @@
+services:
+  kartana:
+    build:
+      context: ${KARTANA_BUILD_CONTEXT:-../kartana}
+      dockerfile: ${KARTANA_DOCKERFILE:-Dockerfile}
+    image: ${KARTANA_LOCAL_IMAGE:-kartana:dev}
+
+  membership-portal:
+    build:
+      context: ${MEMBERSHIP_PORTAL_BUILD_CONTEXT:-../membership-portal}
+      dockerfile: ${MEMBERSHIP_PORTAL_DOCKERFILE:-Dockerfile}
+    image: ${MEMBERSHIP_PORTAL_LOCAL_IMAGE:-membership-portal:dev}
