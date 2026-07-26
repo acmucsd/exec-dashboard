@@ -60,7 +60,7 @@ services:
       - acm_internal
 
   kartana:
-    image: ${KARTANA_IMAGE:-ghcr.io/acmucsd/kartana:latest}
+    image: ${KARTANA_IMAGE:-acmucsd/kartana:latest}
     restart: unless-stopped
     env_file:
       - ${KARTANA_ENV_FILE:-./.env.kartana}
@@ -70,7 +70,7 @@ services:
       - acm_internal
 
   membership-portal:
-    image: ${MEMBERSHIP_PORTAL_IMAGE:-ghcr.io/acmucsd/membership-portal-api:latest}
+    image: ${MEMBERSHIP_PORTAL_IMAGE:-acmucsd/membership-portal-api:latest}
     restart: unless-stopped
     env_file:
       - ${MEMBERSHIP_PORTAL_ENV_FILE:-./.env.membership}
