@@ -5,7 +5,6 @@ import { getCommunity, isExec, Member } from '@t/Member';
 import { Task, TaskResult } from '@modules/workflow/types/Task'
 import { ACMCommunity } from '@t/ACM';
 import { toError } from '@lib/error';
-import { WorkflowContext } from '../types/WorkflowContext';
 
 /*
 Returns true if member is successfully assigned to both ACM Board and Team groups.
@@ -14,9 +13,7 @@ Returns false otherwise. Can imply partial success.
 export default class AssignGoogleWorkspaceGroups extends Task {
     label = 'Assign acmucsd email to Google Workspace groups';
 
-    async run(ctx: WorkflowContext): Promise<TaskResult> {
-        const { member } = ctx;
-
+    async run(member: Member): Promise<TaskResult> {
         const groupEmails = [
             GW_GROUP_BOARD,
             GW_GROUP_TEAM[member.team],

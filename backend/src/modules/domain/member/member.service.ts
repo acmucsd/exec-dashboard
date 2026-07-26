@@ -29,15 +29,17 @@ export class MemberService {
 
 	async create(memberToBeCreated: Member): Promise<MemberEntity> {
 		const member = this.memberRepository.create(memberToBeCreated as MemberEntity);
-		await this.workflowService.createMember(member as Member);
-		return this.memberRepository.save(member);
+		const saved = await this.memberRepository.save(member);
+		await this.workflowService.createMember(saved as Member);
+		return this.findOne(saved.id);
 	}
 
 	async update(id: number, memberPatch: Partial<Member>): Promise<MemberEntity> {
 		const member = await this.findOne(id);
 		Object.assign(member, memberPatch);
+		await this.memberRepository.save(member);
 		await this.workflowService.updateMember(member as Member);
-		return this.memberRepository.save(member);
+		return this.findOne(id);
 	}
 
 	async remove(id: number): Promise<void> {

@@ -1,5 +1,4 @@
 import { Member } from "../../../types/Member";
-import { WorkflowContext } from "./WorkflowContext";
 import { TaskId, TaskRegistry } from "../taskRegistry";
 
 export interface WorkflowStepDefinition {
@@ -17,35 +16,52 @@ export class WorkflowDefinition {
     }
 }
 
-export class Workflow {
-    private context: WorkflowContext;
+export type LoadMember = (id: number) => Promise<Member>;
 
+export type PersistMemberPatch = (
+    member: Member,
+    patch: Partial<Member>,
+) => Promise<void>;
+
+export class Workflow {
     constructor(
         private workflowSteps: WorkflowStepDefinition[],
     ) {}
 
-    async run(member: Member) {
-        this.context = {
-            member,
-            secrets: {}
-        };
-        await Promise.all(this.workflowSteps.map(step => this.executeStep(step)));
+    async run( // initial call
+        member: Member,
+        loadMember: LoadMember,
+        persistMemberPatch: PersistMemberPatch,
+    ): Promise<Member> {
+        const memberId = member.id;
+        await Promise.all(this.workflowSteps.map(step =>
+            this.executeStep(step, memberId, loadMember, persistMemberPatch),
+        ));
+        return loadMember(memberId);
     }
 
-    private async executeStep(step: WorkflowStepDefinition): Promise<void> {
+    private async executeStep( // each step, recursive
+        step: WorkflowStepDefinition,
+        memberId: number,
+        loadMember: LoadMember,
+        persistMemberPatch: PersistMemberPatch,
+    ): Promise<void> {
+        const member = await loadMember(memberId);
         const task = TaskRegistry.getTask(step.taskId);
-        const result = await task.run(this.context);
+        const result = await task.run(member);
 
         if (!result.success) {
             throw result.error ?? new Error(result.feedback);
         }
 
-        // patch the context if needed
-        if (result.memberPatch) { Object.assign(this.context.member, result.memberPatch); }
-        if (result.secretsPatch) { this.context.secrets = { ...this.context.secrets, ...result.secretsPatch }; }
+        if (result.memberPatch) {
+            await persistMemberPatch(member, result.memberPatch);
+        }
 
         if (step.next) {
-            await Promise.all(step.next.map(next => this.executeStep(next)));
+            await Promise.all(step.next.map(next =>
+                this.executeStep(next, memberId, loadMember, persistMemberPatch),
+            ));
         }
     }
 }

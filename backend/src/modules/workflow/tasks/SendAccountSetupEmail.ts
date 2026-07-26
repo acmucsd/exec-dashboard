@@ -4,7 +4,6 @@ import { Member } from '@t/Member'
 import { Task, TaskResult } from '@modules/workflow/types/Task'
 import { sesClient } from '../clients/ses'
 import { toError } from '@lib/error'
-import { SecretKey, WorkflowContext } from '../types/WorkflowContext'
 
 /*
 Returns true if account setup email was sent correctly.
@@ -13,9 +12,8 @@ Returns false otherwise.
 export default class SendAccountSetupEmail extends Task {
     label = 'Send account setup email';
 
-    async run(ctx: WorkflowContext): Promise<TaskResult> {
-        const { member, secrets } = ctx
-        const tempPassword = secrets[SecretKey.TempPassword];
+    async run(member: Member): Promise<TaskResult> {
+        const tempPassword = member.setupPassword;
 
         const fullName = `${member.firstName} ${member.lastName}`
         const orgEmail = member.acmEmail!

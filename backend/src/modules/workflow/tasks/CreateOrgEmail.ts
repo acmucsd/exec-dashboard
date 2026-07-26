@@ -2,7 +2,6 @@ import { googleAdminClient } from '../clients/google'
 import { toError } from '@lib/error'
 import { Member } from '@t/Member'
 import { Task, TaskResult } from '@modules/workflow/types/Task'
-import { WorkflowContext } from '../types/WorkflowContext'
 
 /*
 Returns true if the email already exists for the user, or is successfully created.
@@ -11,8 +10,7 @@ Returns false otherwise.
 export default class CreateOrgEmail extends Task {
     label = 'Create ACM email';
 
-    async run(ctx: WorkflowContext): Promise<TaskResult> {
-        const { member } = ctx;
+    async run(member: Member): Promise<TaskResult> {
 
         const firstName = member.firstName;
         const lastName = member.lastName;
@@ -67,8 +65,7 @@ export default class CreateOrgEmail extends Task {
             await this.pollUserUntilComplete(acmEmail);
 
             return this.TaskSuccess({
-                memberPatch: { acmEmail },
-                secretsPatch: { tempPassword },
+                memberPatch: { acmEmail, setupPassword: tempPassword },
                 feedback: `Email successfully created for ${fullName}: ${acmEmail}.`
             })
         } catch (err) {

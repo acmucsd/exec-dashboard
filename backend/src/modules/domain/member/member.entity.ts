@@ -26,6 +26,9 @@ export class MemberEntity {
 	@Column({ type: 'varchar', length: 256, nullable: true })
 	acmEmail: string | null;
 
+	@Column({ type: 'varchar', length: 128, nullable: true, select: false })
+	setupPassword: string | null;
+
 	@Column({ type: 'varchar', length: 128, nullable: true })
 	githubUsername: string;
 
