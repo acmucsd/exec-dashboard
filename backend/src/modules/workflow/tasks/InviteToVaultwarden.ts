@@ -1,19 +1,17 @@
 import { toError } from '@lib/error';
 import { Task, TaskResult } from '@modules/workflow/types/Task'
-import { ACMTeam } from '@t/ACM';
 import { Member } from '@t/Member';
 import 'dotenv/config'
 export default class InviteToVaultwarden extends Task {
     label = 'Invite user to Vaultwarden';
 
     async run(_member: Member): Promise<TaskResult> {
-        // Get access token from vault
 
-        const VAULT_TEAM_CREDS  = JSON.parse(process.env.VAULT_TEAM_CREDS!);
-
+        
         const email = _member.acmEmail;
         const team = _member.team;
-        
+
+        const VAULT_TEAM_CREDS  = JSON.parse(process.env.VAULT_TEAM_CREDS!);
         const organizationId = VAULT_TEAM_CREDS[team].organizationId;
         const collection = VAULT_TEAM_CREDS[team].collections[0];
 

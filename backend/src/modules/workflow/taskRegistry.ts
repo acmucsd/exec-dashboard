@@ -6,7 +6,7 @@ import SendAccountSetupEmail from "./tasks/SendAccountSetupEmail";
 import AssignKartanaRoles from "./tasks/AssignKartanaRoles";
 import SubscribeKartanaMeetingPings from "./tasks/TODO/SubscribeKartanaMeetingPings";
 import GrantMembershipPortalPerms from "./tasks/TODO/GrantMembershipPortalPerms";
-import InviteToVaultwarden from "./tasks/TODO/InviteToVaultwarden";
+import InviteToVaultwarden from "./tasks/InviteToVaultwarden";
 import SendBoardAcceptanceEmail from "./tasks/TODO/SendBoardAcceptanceEmail";
 import UpdateBoardGoogleSheet from "./tasks/TODO/UpdateBoardGoogleSheet";
 import { Task } from "./types/Task";
