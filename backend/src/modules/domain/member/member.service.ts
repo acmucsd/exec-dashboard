@@ -7,45 +7,50 @@ import { WorkflowService } from '@modules/workflow/workflow.service';
 
 @Injectable()
 export class MemberService {
-	constructor(
-		@InjectRepository(MemberEntity)
-		private readonly memberRepository: Repository<MemberEntity>,
-		private readonly workflowService: WorkflowService,
-	) {}
+  constructor(
+    @InjectRepository(MemberEntity)
+    private readonly memberRepository: Repository<MemberEntity>,
+    private readonly workflowService: WorkflowService,
+  ) {}
 
-    // Methods
+  // Methods
 
-	async findAll(): Promise<MemberEntity[]> {
-		return this.memberRepository.find();
-	}
+  async findAll(): Promise<MemberEntity[]> {
+    return this.memberRepository.find();
+  }
 
-	async findOne(id: number): Promise<MemberEntity> {
-		const member = await this.memberRepository.findOne({ where: { id } });
-		if (!member) {
-			throw new NotFoundException(`Member with id ${id} not found`);
-		}
-		return member;
-	}
+  async findOne(id: number): Promise<MemberEntity> {
+    const member = await this.memberRepository.findOne({ where: { id } });
+    if (!member) {
+      throw new NotFoundException(`Member with id ${id} not found`);
+    }
+    return member;
+  }
 
-	async create(memberToBeCreated: Member): Promise<MemberEntity> {
-		const member = this.memberRepository.create(memberToBeCreated as MemberEntity);
-		const saved = await this.memberRepository.save(member);
-		await this.workflowService.createMember(saved as Member);
-		return this.findOne(saved.id);
-	}
+  async create(memberToBeCreated: Member): Promise<MemberEntity> {
+    const member = this.memberRepository.create(
+      memberToBeCreated as MemberEntity,
+    );
+    const saved = await this.memberRepository.save(member);
+    await this.workflowService.createMember(saved as Member);
+    return this.findOne(saved.id);
+  }
 
-	async update(id: number, memberPatch: Partial<Member>): Promise<MemberEntity> {
-		const member = await this.findOne(id);
-		Object.assign(member, memberPatch);
-		await this.memberRepository.save(member);
-		await this.workflowService.updateMember(member as Member);
-		return this.findOne(id);
-	}
+  async update(
+    id: number,
+    memberPatch: Partial<Member>,
+  ): Promise<MemberEntity> {
+    const member = await this.findOne(id);
+    Object.assign(member, memberPatch);
+    await this.memberRepository.save(member);
+    await this.workflowService.updateMember(member as Member);
+    return this.findOne(id);
+  }
 
-	async remove(id: number): Promise<void> {
-		const result = await this.memberRepository.delete(id);
-		if (result.affected === 0) {
-			throw new NotFoundException(`Member with id ${id} not found`);
-		}
-	}
+  async remove(id: number): Promise<void> {
+    const result = await this.memberRepository.delete(id);
+    if (result.affected === 0) {
+      throw new NotFoundException(`Member with id ${id} not found`);
+    }
+  }
 }

@@ -1,5 +1,4 @@
-
 export type KartanaAssignResponse = {
-    success: string,
-    error?: string,
-}
+  success: string;
+  error?: string;
+};
