@@ -14,6 +14,7 @@ export type TaskResult =
 
 export type TaskPreview = {
   description: string;
+  requiresConfirmation?: boolean;
   memberPatch?: Partial<Member>;
 };
 

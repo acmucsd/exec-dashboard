@@ -64,7 +64,8 @@ export class Workflow {
     const taskPreview: WorkflowTaskPreview = {
       taskId: step.taskId,
       label: task.label,
-      requiresConfirmation: task.requiresConfirmation,
+      requiresConfirmation:
+        preview.requiresConfirmation ?? task.requiresConfirmation,
       ...preview,
     };
     const nextPreviews = step.next

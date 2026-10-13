@@ -18,6 +18,7 @@ export default class AssignGitHubMembership extends Task {
     if (!teamSlug) {
       return {
         description: `No GitHub organization or team changes are configured for ${member.githubUsername}.`,
+        requiresConfirmation: false,
       };
     }
 
