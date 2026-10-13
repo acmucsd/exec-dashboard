@@ -23,7 +23,8 @@ export default class AssignGitHubMembership extends Task {
     }
 
     const orgRole = member.position == ACMPosition.VP ? 'admin' : 'member';
-    const teamRole = member.position == ACMPosition.VP ? 'maintainer' : 'member';
+    const teamRole =
+      member.position == ACMPosition.VP ? 'maintainer' : 'member';
     const org = process.env.GITHUB_ORG!;
     const [orgMembership, teamMembership] = await Promise.all([
       githubClient.rest.orgs
@@ -47,13 +48,33 @@ export default class AssignGitHubMembership extends Task {
         }),
     ]);
 
-    const orgChange = orgMembership
-      ? `Set ${member.githubUsername}'s organization role to ${orgRole}.`
-      : `Add ${member.githubUsername} to GitHub organization ${org} as ${orgRole}.`;
-    const teamChange = teamMembership
-      ? `Set ${member.githubUsername}'s ${teamSlug} team role to ${teamRole}.`
-      : `Add ${member.githubUsername} to GitHub team ${teamSlug} as ${teamRole}.`;
-    return { description: `${orgChange}\n${teamChange}` };
+    const changes: string[] = [];
+    if (!orgMembership) {
+      changes.push(
+        `Add ${member.githubUsername} to GitHub organization ${org} as ${orgRole}.`,
+      );
+    } else if (orgMembership.data.role !== orgRole) {
+      changes.push(
+        `Change ${member.githubUsername}'s organization role from ${orgMembership.data.role} to ${orgRole}.`,
+      );
+    }
+
+    if (!teamMembership) {
+      changes.push(
+        `Add ${member.githubUsername} to GitHub team ${teamSlug} as ${teamRole}.`,
+      );
+    } else if (teamMembership.data.role !== teamRole) {
+      changes.push(
+        `Change ${member.githubUsername}'s ${teamSlug} team role from ${teamMembership.data.role} to ${teamRole}.`,
+      );
+    }
+
+    return changes.length
+      ? { description: changes.join('\n') }
+      : {
+          description: `No GitHub organization or team changes needed for ${member.githubUsername}.`,
+          requiresConfirmation: false,
+        };
   }
 
   async run(member: Member): Promise<TaskResult> {

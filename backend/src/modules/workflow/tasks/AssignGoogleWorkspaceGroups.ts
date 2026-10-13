@@ -2,11 +2,10 @@ import { GaxiosError } from 'googleapis-common';
 import { googleAdminClient } from '../clients/google';
 import {
   GW_GROUP_BOARD,
-  GW_GROUP_EXEC,
   GW_GROUP_GENERAL,
   GW_GROUP_TEAM,
 } from '@modules/workflow/constants/googleWorkspace';
-import { getCommunity, isExec, Member } from '@t/Member';
+import { getCommunity, Member } from '@t/Member';
 import { Task, TaskResult } from '@modules/workflow/types/Task';
 import { ACMCommunity } from '@t/ACM';
 import { toError } from '@lib/error';
@@ -26,34 +25,58 @@ export default class AssignGoogleWorkspaceGroups extends Task {
     if (getCommunity(member) == ACMCommunity.General) {
       groupEmails.push(GW_GROUP_GENERAL);
     }
-    if (isExec(member)) {
-      // disable this for now until we have proper permissions system
-      //groupEmails.push(GW_GROUP_EXEC);
-    }
     return [...new Set(groupEmails)];
+  }
+
+  private async isGroupMember(
+    groupEmail: string,
+    memberEmail: string,
+  ): Promise<boolean> {
+    let pageToken: string | undefined;
+    do {
+      const response = await googleAdminClient.members.list({
+        groupKey: groupEmail,
+        maxResults: 200,
+        pageToken,
+      });
+      if (
+        response.data.members?.some(
+          (groupMember) =>
+            groupMember.email?.toLowerCase() === memberEmail.toLowerCase(),
+        )
+      ) {
+        return true;
+      }
+      pageToken = response.data.nextPageToken ?? undefined;
+    } while (pageToken);
+    return false;
   }
 
   async preview(member: Member) {
     if (!member.acmEmail) {
-      return { description: 'No Google Workspace groups can be assigned without an ACM email.' };
+      return {
+        description:
+          'No Google Workspace group changes; an ACM email is unavailable.',
+        requiresConfirmation: false,
+      };
     }
 
-    const groups = await Promise.all(
+    const groupsToAdd = await Promise.all(
       this.groupEmails(member).map(async (groupEmail) => {
-        const response = await googleAdminClient.members.list({
-          groupKey: groupEmail,
-          maxResults: 200,
-        });
-        const alreadyMember = response.data.members?.some(
-          (groupMember) =>
-            groupMember.email?.toLowerCase() === member.acmEmail!.toLowerCase(),
-        );
-        return alreadyMember
-          ? `${member.acmEmail} is already in ${groupEmail}.`
-          : `Add ${member.acmEmail} to ${groupEmail}.`;
+        const isMember = await this.isGroupMember(groupEmail, member.acmEmail!);
+        return isMember ? null : groupEmail;
       }),
     );
-    return { description: groups.join('\n') };
+    const changes = groupsToAdd
+      .filter((groupEmail): groupEmail is string => groupEmail !== null)
+      .map((groupEmail) => `Add ${member.acmEmail} to ${groupEmail}.`);
+
+    return changes.length
+      ? { description: changes.join('\n') }
+      : {
+          description: `No Google Workspace group changes needed for ${member.acmEmail}.`,
+          requiresConfirmation: false,
+        };
   }
 
   async run(member: Member): Promise<TaskResult> {
@@ -80,7 +103,7 @@ export default class AssignGoogleWorkspaceGroups extends Task {
     }
 
     return this.TaskSuccess({
-      feedback: `Successfully assigned ${member.acmEmail} to groups ${groupEmails}.`,
+      feedback: `Successfully assigned ${member.acmEmail} to groups ${groupEmails.join(', ')}.`,
     });
   }
 }

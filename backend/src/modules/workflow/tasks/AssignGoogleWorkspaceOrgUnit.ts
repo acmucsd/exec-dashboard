@@ -16,7 +16,10 @@ export default class AssignGoogleWorkspaceOrgUnit extends Task {
   async preview(member: Member) {
     const orgUnit = GW_ORG_TEAM[member.team];
     if (!member.acmEmail) {
-      return { description: `No ACM email is available to move to ${orgUnit}.` };
+      return {
+        description: `No ACM email is available to move to ${orgUnit}.`,
+        requiresConfirmation: false,
+      };
     }
 
     try {
@@ -27,8 +30,9 @@ export default class AssignGoogleWorkspaceOrgUnit extends Task {
       return {
         description:
           currentOrgUnit === orgUnit
-            ? `${member.acmEmail} is already in ${orgUnit}.`
+            ? `No Google Workspace organizational unit change needed for ${member.acmEmail}.`
             : `Move ${member.acmEmail} from ${currentOrgUnit} to ${orgUnit}.`,
+        requiresConfirmation: currentOrgUnit !== orgUnit,
       };
     } catch (err) {
       if (err instanceof GaxiosError && err.response?.status === 404) {

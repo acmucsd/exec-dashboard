@@ -15,7 +15,8 @@ export default class CreateOrgEmail extends Task {
     const fullName = `${member.firstName} ${member.lastName}`;
     if (member.acmEmail) {
       return {
-        description: `Keep existing ACM email ${member.acmEmail} for ${fullName}.`,
+        description: `No ACM email change needed for ${fullName}; ${member.acmEmail} already exists.`,
+        requiresConfirmation: false,
         memberPatch: { acmEmail: member.acmEmail },
       };
     }

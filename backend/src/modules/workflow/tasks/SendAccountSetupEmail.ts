@@ -1,7 +1,7 @@
 import { SendEmailCommand } from '@aws-sdk/client-ses';
 import { accountSetupTemplate } from '../templates/accountSetupEmail';
 import { Member } from '@t/Member';
-import { Task, TaskResult } from '@modules/workflow/types/Task';
+import { Task, TaskPreview, TaskResult } from '@modules/workflow/types/Task';
 import { sesClient } from '../clients/ses';
 import { toError } from '@lib/error';
 
@@ -13,16 +13,17 @@ export default class SendAccountSetupEmail extends Task {
   label = 'Send account setup email';
   requiresConfirmation = true;
 
-  async preview(member: Member) {
+  preview(member: Member): Promise<TaskPreview> {
     const orgEmail = member.acmEmail;
     if (!orgEmail) {
-      return {
-        description: `No setup email can be sent to ${member.email} until an ACM email is available.`,
-      };
+      return Promise.resolve({
+        description: `No setup email changes; an ACM email is unavailable for ${member.email}.`,
+        requiresConfirmation: false,
+      });
     }
-    return {
+    return Promise.resolve({
       description: `Send account setup instructions for ${orgEmail} to ${member.email}.`,
-    };
+    });
   }
 
   async run(member: Member): Promise<TaskResult> {
