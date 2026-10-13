@@ -1,3 +1,4 @@
+import { UnprocessableEntityException } from '@nestjs/common';
 import { Member } from '../../../types/Member';
 import { TaskId, TaskRegistry } from '../taskRegistry';
 
@@ -51,7 +52,9 @@ export class Workflow {
     const result = await task.run(member);
 
     if (!result.success) {
-      throw result.error ?? new Error(result.feedback);
+      throw new UnprocessableEntityException(
+        result.error?.message ?? result.feedback,
+      );
     }
 
     if (result.memberPatch) {

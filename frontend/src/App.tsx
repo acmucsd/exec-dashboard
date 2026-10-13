@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import './App.css'
 
 type Member = {
@@ -15,6 +15,25 @@ type Member = {
 }
 
 type MemberForm = Omit<Member, 'id'>
+type Toast = { id: number; kind: 'success' | 'error'; message: string }
+
+const getErrorMessage = async (response: Response, fallback: string) => {
+  const body: unknown = await response.json().catch(() => null)
+  if (typeof body === 'object' && body !== null && 'message' in body) {
+    const message = body.message
+    if (typeof message === 'string') return message
+    if (Array.isArray(message)) return message.join(', ')
+  }
+  return fallback
+}
+
+const fetchMembers = async (): Promise<Member[]> => {
+  const response = await fetch('/api/members')
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response, 'Unable to load members'))
+  }
+  return (await response.json()) as Member[]
+}
 
 const emptyForm: MemberForm = {
   firstName: '',
@@ -32,29 +51,51 @@ function App() {
   const [members, setMembers] = useState<Member[]>([])
   const [form, setForm] = useState<MemberForm>(emptyForm)
   const [editingId, setEditingId] = useState<number | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [isLoading, setIsLoading] = useState(true)
+  const [toasts, setToasts] = useState<Toast[]>([])
+  const nextToastId = useRef(0)
+  const toastTimeouts = useRef(new Map<number, number>())
+
+  useEffect(() => {
+    const timeouts = toastTimeouts.current
+    return () => {
+      timeouts.forEach((timeoutId) => window.clearTimeout(timeoutId))
+      timeouts.clear()
+    }
+  }, [])
+
+  const dismissToast = useCallback((id: number) => {
+    const timeoutId = toastTimeouts.current.get(id)
+    if (timeoutId !== undefined) window.clearTimeout(timeoutId)
+    toastTimeouts.current.delete(id)
+    setToasts((current) => current.filter((toast) => toast.id !== id))
+  }, [])
+
+  const showToast = useCallback((message: string, kind: Toast['kind']) => {
+    const id = ++nextToastId.current
+    setToasts((current) => [...current, { id, message, kind }])
+    const timeoutId = window.setTimeout(() => dismissToast(id), 6000)
+    toastTimeouts.current.set(id, timeoutId)
+  }, [dismissToast])
 
   const loadMembers = async () => {
-    setIsLoading(true)
-    setError('')
     try {
-      const response = await fetch('/api/members')
-      if (!response.ok) {
-        throw new Error('Unable to load members')
-      }
-      const data = (await response.json()) as Member[]
-      setMembers(data)
+      setMembers(await fetchMembers())
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unexpected error')
+      showToast(err instanceof Error ? err.message : 'Unexpected error', 'error')
     } finally {
       setIsLoading(false)
     }
   }
 
   useEffect(() => {
-    void loadMembers()
-  }, [])
+    void fetchMembers()
+      .then(setMembers)
+      .catch((err: unknown) => {
+        showToast(err instanceof Error ? err.message : 'Unexpected error', 'error')
+      })
+      .finally(() => setIsLoading(false))
+  }, [showToast])
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = event.target
@@ -71,7 +112,6 @@ function App() {
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
-    setError('')
 
     const payload = {
       ...form,
@@ -81,7 +121,7 @@ function App() {
     try {
       const response = editingId
         ? await fetch(`/api/members/${editingId}`, {
-            method: 'PUT',
+            method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
           })
@@ -92,13 +132,26 @@ function App() {
           })
 
       if (!response.ok) {
-        throw new Error('Unable to save member')
+        throw new Error(await getErrorMessage(response, 'Unable to save member'))
       }
 
+      const savedMember = (await response.json()) as Member
+      const wasEditing = editingId !== null
+      setMembers((current) =>
+        wasEditing
+          ? current.map((member) =>
+              member.id === savedMember.id ? savedMember : member,
+            )
+          : [...current, savedMember],
+      )
       resetForm()
-      await loadMembers()
+      showToast(
+        wasEditing ? 'Member updated successfully.' : 'Member created successfully.',
+        'success',
+      )
+      void loadMembers()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unexpected error')
+      showToast(err instanceof Error ? err.message : 'Unexpected error', 'error')
     }
   }
 
@@ -118,23 +171,43 @@ function App() {
   }
 
   const handleDelete = async (id: number) => {
-    setError('')
     try {
       const response = await fetch(`/api/members/${id}`, { method: 'DELETE' })
       if (!response.ok) {
-        throw new Error('Unable to delete member')
+        throw new Error(await getErrorMessage(response, 'Unable to delete member'))
       }
       if (editingId === id) {
         resetForm()
       }
-      await loadMembers()
+      setMembers((current) => current.filter((member) => member.id !== id))
+      showToast('Member deleted successfully.', 'success')
+      void loadMembers()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unexpected error')
+      showToast(err instanceof Error ? err.message : 'Unexpected error', 'error')
     }
   }
 
   return (
     <div className="app-shell">
+      <div className="toast-stack" aria-label="Notifications">
+        {toasts.map((toast) => (
+          <div
+            key={toast.id}
+            className={`toast toast-${toast.kind}`}
+            role={toast.kind === 'error' ? 'alert' : 'status'}
+          >
+            <p>{toast.message}</p>
+            <button
+              type="button"
+              className="toast-dismiss"
+              onClick={() => dismissToast(toast.id)}
+              aria-label={`Dismiss ${toast.kind} notification`}
+            >
+              Close
+            </button>
+          </div>
+        ))}
+      </div>
       <header className="page-header">
         <div>
           <p className="eyebrow">Exec Dashboard</p>
@@ -230,8 +303,6 @@ function App() {
             Refresh
           </button>
         </div>
-
-        {error ? <p className="error">{error}</p> : null}
 
         {isLoading ? (
           <p>Loading members...</p>
