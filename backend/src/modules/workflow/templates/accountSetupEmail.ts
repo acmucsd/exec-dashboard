@@ -1,13 +1,13 @@
 export function accountSetupTemplate(params: {
-	fullName: string
-	orgEmail: string
-	tempPassword: string
+  fullName: string;
+  orgEmail: string;
+  tempPassword: string;
 }) {
-	const { fullName, orgEmail, tempPassword } = params
+  const { fullName, orgEmail, tempPassword } = params;
 
-	return {
-		subject: 'Your ACM UCSD Email Account',
-		body: `
+  return {
+    subject: 'Your ACM UCSD Email Account',
+    body: `
 Hi ${fullName},
 
 Your ACM UCSD email account has been created. Here are your login details:
@@ -21,6 +21,6 @@ Sign in at: https://mail.google.com
 
 Best,
 ACM UCSD
-		`.trim()
-	}
+		`.trim(),
+  };
 }

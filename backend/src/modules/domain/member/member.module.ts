@@ -6,11 +6,8 @@ import { MemberEntity } from './member.entity';
 import { WorkflowModule } from '@modules/workflow/workflow.module';
 
 @Module({
-	imports: [
-        TypeOrmModule.forFeature([MemberEntity]),
-        WorkflowModule,
-    ],
-	controllers: [MemberController],
-	providers: [MemberService],
+  imports: [TypeOrmModule.forFeature([MemberEntity]), WorkflowModule],
+  controllers: [MemberController],
+  providers: [MemberService],
 })
 export class MemberModule {}
