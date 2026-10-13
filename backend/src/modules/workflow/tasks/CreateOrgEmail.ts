@@ -9,6 +9,43 @@ Returns false otherwise.
 */
 export default class CreateOrgEmail extends Task {
   label = 'Create ACM email';
+  requiresConfirmation = true;
+
+  async preview(member: Member) {
+    const fullName = `${member.firstName} ${member.lastName}`;
+    if (member.acmEmail) {
+      return {
+        description: `Keep existing ACM email ${member.acmEmail} for ${fullName}.`,
+        memberPatch: { acmEmail: member.acmEmail },
+      };
+    }
+
+    const existingRes = await googleAdminClient.users.list({
+      domain: process.env.GOOGLE_DOMAIN,
+      maxResults: 500,
+      projection: 'basic',
+    });
+    const existingUsernames = new Set(
+      (existingRes.data.users ?? []).map((user) =>
+        user.primaryEmail!.split('@')[0].toLowerCase(),
+      ),
+    );
+    const username = !existingUsernames.has(member.firstName.toLowerCase())
+      ? member.firstName.toLowerCase()
+      : `${member.firstName}${member.lastName}`.toLowerCase();
+
+    if (existingUsernames.has(username)) {
+      throw new Error(
+        `No available email username for ${fullName}. Account not created.`,
+      );
+    }
+
+    const acmEmail = `${username}@${process.env.GOOGLE_DOMAIN}`;
+    return {
+      description: `Create ACM email ${acmEmail} for ${fullName}.`,
+      memberPatch: { acmEmail },
+    };
+  }
 
   async run(member: Member): Promise<TaskResult> {
     const firstName = member.firstName;

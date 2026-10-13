@@ -16,6 +16,25 @@ type Member = {
 
 type MemberForm = Omit<Member, 'id'>
 type Toast = { id: number; kind: 'success' | 'error'; message: string }
+type WorkflowTaskPreview = {
+  taskId: string
+  label: string
+  description: string
+  requiresConfirmation: boolean
+}
+type WorkflowPreview = {
+  confirmationId: string
+  summary: string
+  tasks: WorkflowTaskPreview[]
+}
+type PendingChange =
+  | {
+      kind: 'create' | 'update'
+      memberId: number | null
+      payload: MemberForm
+      preview: WorkflowPreview
+    }
+  | { kind: 'delete'; memberId: number; preview: WorkflowPreview }
 
 const getErrorMessage = async (response: Response, fallback: string) => {
   const body: unknown = await response.json().catch(() => null)
@@ -52,7 +71,10 @@ function App() {
   const [form, setForm] = useState<MemberForm>(emptyForm)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [isPreparing, setIsPreparing] = useState(false)
+  const [isApplying, setIsApplying] = useState(false)
   const [toasts, setToasts] = useState<Toast[]>([])
+  const [pendingChange, setPendingChange] = useState<PendingChange | null>(null)
   const nextToastId = useRef(0)
   const toastTimeouts = useRef(new Map<number, number>())
 
@@ -118,40 +140,33 @@ function App() {
       acmEmail: form.acmEmail || null,
     }
 
+    setIsPreparing(true)
     try {
       const response = editingId
-        ? await fetch(`/api/members/${editingId}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-          })
-        : await fetch('/api/members', {
+        ? await fetch(`/api/members/${editingId}/preview`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
           })
-
+        : await fetch('/api/members/preview', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          })
       if (!response.ok) {
-        throw new Error(await getErrorMessage(response, 'Unable to save member'))
+        throw new Error(await getErrorMessage(response, 'Unable to preview member changes'))
       }
-
-      const savedMember = (await response.json()) as Member
-      const wasEditing = editingId !== null
-      setMembers((current) =>
-        wasEditing
-          ? current.map((member) =>
-              member.id === savedMember.id ? savedMember : member,
-            )
-          : [...current, savedMember],
-      )
-      resetForm()
-      showToast(
-        wasEditing ? 'Member updated successfully.' : 'Member created successfully.',
-        'success',
-      )
-      void loadMembers()
+      const preview = (await response.json()) as WorkflowPreview
+      setPendingChange({
+        kind: editingId ? 'update' : 'create',
+        memberId: editingId,
+        payload,
+        preview,
+      })
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Unexpected error', 'error')
+    } finally {
+      setIsPreparing(false)
     }
   }
 
@@ -170,20 +185,87 @@ function App() {
     })
   }
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (member: Member) => {
+    const id = member.id
+    if (id === undefined) return
+    setIsPreparing(true)
     try {
-      const response = await fetch(`/api/members/${id}`, { method: 'DELETE' })
+      const response = await fetch(`/api/members/${id}/delete-preview`, {
+        method: 'POST',
+      })
       if (!response.ok) {
-        throw new Error(await getErrorMessage(response, 'Unable to delete member'))
+        throw new Error(await getErrorMessage(response, 'Unable to preview member deletion'))
       }
-      if (editingId === id) {
-        resetForm()
-      }
-      setMembers((current) => current.filter((member) => member.id !== id))
-      showToast('Member deleted successfully.', 'success')
-      void loadMembers()
+      const preview = (await response.json()) as WorkflowPreview
+      setPendingChange({ kind: 'delete', memberId: id, preview })
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Unexpected error', 'error')
+    } finally {
+      setIsPreparing(false)
+    }
+  }
+
+  const handleConfirmChange = async () => {
+    if (!pendingChange) return
+    setIsApplying(true)
+    const confirmationHeaders = {
+      'X-Workflow-Confirmation': pendingChange.preview.confirmationId,
+    }
+
+    try {
+      const response =
+        pendingChange.kind === 'delete'
+          ? await fetch(`/api/members/${pendingChange.memberId}`, {
+              method: 'DELETE',
+              headers: confirmationHeaders,
+            })
+          : await fetch(
+              pendingChange.kind === 'update'
+                ? `/api/members/${pendingChange.memberId}`
+                : '/api/members',
+              {
+                method: pendingChange.kind === 'update' ? 'PATCH' : 'POST',
+                headers: {
+                  ...confirmationHeaders,
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(pendingChange.payload),
+              },
+            )
+
+      if (!response.ok) {
+        throw new Error(await getErrorMessage(response, 'Unable to apply member changes'))
+      }
+
+      if (pendingChange.kind === 'delete') {
+        setMembers((current) =>
+          current.filter((member) => member.id !== pendingChange.memberId),
+        )
+        if (editingId === pendingChange.memberId) resetForm()
+        showToast('Member deleted successfully.', 'success')
+      } else {
+        const savedMember = (await response.json()) as Member
+        const wasEditing = pendingChange.kind === 'update'
+        setMembers((current) =>
+          wasEditing
+            ? current.map((member) =>
+                member.id === savedMember.id ? savedMember : member,
+              )
+            : [...current, savedMember],
+        )
+        resetForm()
+        showToast(
+          wasEditing ? 'Member updated successfully.' : 'Member created successfully.',
+          'success',
+        )
+      }
+      setPendingChange(null)
+      void loadMembers()
+    } catch (err) {
+      setPendingChange(null)
+      showToast(err instanceof Error ? err.message : 'Unexpected error', 'error')
+    } finally {
+      setIsApplying(false)
     }
   }
 
@@ -208,6 +290,59 @@ function App() {
           </div>
         ))}
       </div>
+      {pendingChange ? (
+        <div className="modal-backdrop">
+          <section
+            className="workflow-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="workflow-modal-title"
+          >
+            <div className="modal-heading">
+              <div>
+                <p className="eyebrow">Review before applying</p>
+                <h2 id="workflow-modal-title">Confirm changes</h2>
+              </div>
+            </div>
+            <p className="workflow-summary">{pendingChange.preview.summary}</p>
+            {pendingChange.preview.tasks.length > 0 ? (
+              <ul className="workflow-task-list">
+                {pendingChange.preview.tasks.map((task) => (
+                  <li key={task.taskId}>
+                    <div className="workflow-task-heading">
+                      <h3>{task.label}</h3>
+                      <span className={task.requiresConfirmation ? 'task-confirmation' : 'task-informational'}>
+                        {task.requiresConfirmation ? 'Will change' : 'Informational'}
+                      </span>
+                    </div>
+                    <p>{task.description}</p>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="secondary"
+                onClick={() => setPendingChange(null)}
+                disabled={isApplying}
+              >
+                Cancel
+              </button>
+              <button type="button" onClick={() => void handleConfirmChange()} disabled={isApplying}>
+                {isApplying ? (
+                  <>
+                    <span className="loading-spinner" aria-hidden="true" />
+                    Applying...
+                  </>
+                ) : (
+                  'Confirm and apply'
+                )}
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
       <header className="page-header">
         <div>
           <p className="eyebrow">Exec Dashboard</p>
@@ -290,7 +425,18 @@ function App() {
           </label>
 
           <div className="button-row">
-            <button type="submit">{editingId ? 'Save changes' : 'Create member'}</button>
+            <button type="submit" disabled={isPreparing}>
+              {isPreparing ? (
+                <>
+                  <span className="loading-spinner" aria-hidden="true" />
+                  Preparing preview...
+                </>
+              ) : editingId ? (
+                'Review changes'
+              ) : (
+                'Review new member'
+              )}
+            </button>
             {editingId ? <button type="button" className="secondary" onClick={resetForm}>Cancel</button> : null}
           </div>
         </form>
@@ -340,8 +486,20 @@ function App() {
                         <button type="button" className="secondary" onClick={() => handleEdit(member)}>
                           Edit
                         </button>
-                        <button type="button" className="danger" onClick={() => void handleDelete(member.id ?? 0)}>
-                          Delete
+                        <button
+                          type="button"
+                          className="danger"
+                          onClick={() => void handleDelete(member)}
+                          disabled={isPreparing}
+                        >
+                          {isPreparing ? (
+                            <>
+                              <span className="loading-spinner" aria-hidden="true" />
+                              Preparing...
+                            </>
+                          ) : (
+                            'Delete'
+                          )}
                         </button>
                       </div>
                     </td>

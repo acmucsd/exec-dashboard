@@ -1,5 +1,6 @@
 import { UnprocessableEntityException } from '@nestjs/common';
 import { Member } from '../../../types/Member';
+import { TaskPreview, WorkflowTaskPreview } from './Task';
 import { TaskId, TaskRegistry } from '../taskRegistry';
 
 export interface WorkflowStepDefinition {
@@ -38,6 +39,43 @@ export class Workflow {
       ),
     );
     return loadMember(memberId);
+  }
+
+  async preview(member: Member): Promise<WorkflowTaskPreview[]> {
+    const previews = await Promise.all(
+      this.workflowSteps.map((step) => this.previewStep(step, member)),
+    );
+    return previews.flat();
+  }
+
+  private async previewStep(
+    step: WorkflowStepDefinition,
+    member: Member,
+  ): Promise<WorkflowTaskPreview[]> {
+    const task = TaskRegistry.getTask(step.taskId);
+    let preview: TaskPreview;
+    try {
+      preview = await task.preview(member);
+    } catch (err) {
+      throw new UnprocessableEntityException(
+        err instanceof Error ? err.message : String(err),
+      );
+    }
+    const taskPreview: WorkflowTaskPreview = {
+      taskId: step.taskId,
+      label: task.label,
+      requiresConfirmation: task.requiresConfirmation,
+      ...preview,
+    };
+    const nextPreviews = step.next
+      ? await Promise.all(
+          step.next.map((next) =>
+            this.previewStep(next, { ...member, ...preview.memberPatch }),
+          ),
+        )
+      : [];
+
+    return [taskPreview, ...nextPreviews.flat()];
   }
 
   private async executeStep(

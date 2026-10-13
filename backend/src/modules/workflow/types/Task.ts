@@ -12,8 +12,21 @@ export type TaskResult =
       error: Error | null;
     };
 
+export type TaskPreview = {
+  description: string;
+  memberPatch?: Partial<Member>;
+};
+
+export type WorkflowTaskPreview = TaskPreview & {
+  taskId: string;
+  label: string;
+  requiresConfirmation: boolean;
+};
+
 export abstract class Task {
   abstract readonly label: string;
+  abstract readonly requiresConfirmation: boolean;
+  abstract preview(member: Member): Promise<TaskPreview>;
   abstract run(member: Member): Promise<TaskResult>;
 
   protected TaskSuccess(params: {

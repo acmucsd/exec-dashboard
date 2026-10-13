@@ -4,6 +4,16 @@ import { Member } from '@t/Member';
 import 'dotenv/config';
 export default class InviteToVaultwarden extends Task {
   label = 'Invite user to Vaultwarden';
+  requiresConfirmation = true;
+
+  async preview(member: Member) {
+    const credentials = JSON.parse(process.env.VAULT_TEAM_CREDS!);
+    const organizationId = credentials[member.team]?.organizationId;
+    const collection = credentials[member.team]?.collections?.[0];
+    return {
+      description: `Invite ${member.acmEmail} to Vaultwarden organization ${organizationId} with collection ${collection}.`,
+    };
+  }
 
   async run(_member: Member): Promise<TaskResult> {
     const email = _member.acmEmail;

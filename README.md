@@ -36,6 +36,8 @@ Only exec-dashboard frontend and backend are exposed to the host.
 
    If your local paths differ, update `KARTANA_ENV_FILE` and `MEMBERSHIP_PORTAL_ENV_FILE` in `.env.compose`.
 
+   Set `KARTANA_API_SECRET` to the same strong secret in both `backend/.env` and `../kartana/.env`.
+
    For Kartana in this stack, set `GOOGLE_SHEETS_KEY_FILE` to a JSON string in `../kartana/.env`.
 
 4. Start stack using remote Kartana/Membership Portal images:
@@ -59,7 +61,7 @@ This uses `docker-compose.build.yml` and rebuilds local images for Exec Dashboar
 ## Env ownership
 
 - `.env.compose` is for compose wiring only (ports, image tags, build contexts, env-file paths).
-- `backend/.env` is for Exec Dashboard backend runtime config/secrets.
+- `backend/.env` is for Exec Dashboard backend runtime config/secrets, including `KARTANA_API_SECRET`.
 - `../kartana/.env` is for Kartana runtime config/secrets.
 - `../membership-portal/.env` is for Membership Portal runtime config/secrets.
 

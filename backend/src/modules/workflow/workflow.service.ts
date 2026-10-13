@@ -4,6 +4,7 @@ import { Member } from '@t/Member';
 import { Repository } from 'typeorm';
 import { MemberEntity } from '@modules/domain/member/member.entity';
 import { WorkflowDefRegistry, WorkflowId } from './workflowDefRegistry';
+import { WorkflowTaskPreview } from './types/Task';
 
 @Injectable()
 export class WorkflowService {
@@ -21,6 +22,10 @@ export class WorkflowService {
     );
   }
 
+  async previewCreateMember(member: Member): Promise<WorkflowTaskPreview[]> {
+    return WorkflowDefRegistry.instantiate(WorkflowId.CreateMember).preview(member);
+  }
+
   async updateMember(member: Member): Promise<Member> {
     const workflow = WorkflowDefRegistry.instantiate(WorkflowId.UpdateMember);
     return workflow.run(
@@ -28,6 +33,10 @@ export class WorkflowService {
       (id) => this.loadMemberForWorkflow(id),
       (m, patch) => this.persistMemberPatch(m, patch),
     );
+  }
+
+  async previewUpdateMember(member: Member): Promise<WorkflowTaskPreview[]> {
+    return WorkflowDefRegistry.instantiate(WorkflowId.UpdateMember).preview(member);
   }
 
   private async persistMemberPatch(

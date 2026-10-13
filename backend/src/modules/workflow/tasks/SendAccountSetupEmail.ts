@@ -11,6 +11,19 @@ Returns false otherwise.
 */
 export default class SendAccountSetupEmail extends Task {
   label = 'Send account setup email';
+  requiresConfirmation = true;
+
+  async preview(member: Member) {
+    const orgEmail = member.acmEmail;
+    if (!orgEmail) {
+      return {
+        description: `No setup email can be sent to ${member.email} until an ACM email is available.`,
+      };
+    }
+    return {
+      description: `Send account setup instructions for ${orgEmail} to ${member.email}.`,
+    };
+  }
 
   async run(member: Member): Promise<TaskResult> {
     const tempPassword = member.setupPassword;

@@ -17,9 +17,12 @@ Returns false otherwise. Can imply partial success.
 */
 export default class AssignGoogleWorkspaceGroups extends Task {
   label = 'Assign acmucsd email to Google Workspace groups';
+  requiresConfirmation = true;
 
-  async run(member: Member): Promise<TaskResult> {
-    const groupEmails = [GW_GROUP_BOARD, GW_GROUP_TEAM[member.team]];
+  private groupEmails(member: Member): string[] {
+    const groupEmails = [GW_GROUP_BOARD, GW_GROUP_TEAM[member.team]].filter(
+      (email): email is string => Boolean(email),
+    );
     if (getCommunity(member) == ACMCommunity.General) {
       groupEmails.push(GW_GROUP_GENERAL);
     }
@@ -27,6 +30,34 @@ export default class AssignGoogleWorkspaceGroups extends Task {
       // disable this for now until we have proper permissions system
       //groupEmails.push(GW_GROUP_EXEC);
     }
+    return [...new Set(groupEmails)];
+  }
+
+  async preview(member: Member) {
+    if (!member.acmEmail) {
+      return { description: 'No Google Workspace groups can be assigned without an ACM email.' };
+    }
+
+    const groups = await Promise.all(
+      this.groupEmails(member).map(async (groupEmail) => {
+        const response = await googleAdminClient.members.list({
+          groupKey: groupEmail,
+          maxResults: 200,
+        });
+        const alreadyMember = response.data.members?.some(
+          (groupMember) =>
+            groupMember.email?.toLowerCase() === member.acmEmail!.toLowerCase(),
+        );
+        return alreadyMember
+          ? `${member.acmEmail} is already in ${groupEmail}.`
+          : `Add ${member.acmEmail} to ${groupEmail}.`;
+      }),
+    );
+    return { description: groups.join('\n') };
+  }
+
+  async run(member: Member): Promise<TaskResult> {
+    const groupEmails = this.groupEmails(member);
 
     for (const groupEmail of groupEmails) {
       try {

@@ -11,6 +11,49 @@ Returns false otherwise.
 */
 export default class AssignGitHubMembership extends Task {
   label = 'Invite member to GitHub org and assign teams';
+  requiresConfirmation = true;
+
+  async preview(member: Member) {
+    const teamSlug = GITHUB_TEAM[member.team];
+    if (!teamSlug) {
+      return {
+        description: `No GitHub organization or team changes are configured for ${member.githubUsername}.`,
+      };
+    }
+
+    const orgRole = member.position == ACMPosition.VP ? 'admin' : 'member';
+    const teamRole = member.position == ACMPosition.VP ? 'maintainer' : 'member';
+    const org = process.env.GITHUB_ORG!;
+    const [orgMembership, teamMembership] = await Promise.all([
+      githubClient.rest.orgs
+        .getMembershipForUser({
+          org,
+          username: member.githubUsername,
+        })
+        .catch((err: { status?: number }) => {
+          if (err.status === 404) return null;
+          throw err;
+        }),
+      githubClient.rest.teams
+        .getMembershipForUserInOrg({
+          org,
+          team_slug: teamSlug,
+          username: member.githubUsername,
+        })
+        .catch((err: { status?: number }) => {
+          if (err.status === 404) return null;
+          throw err;
+        }),
+    ]);
+
+    const orgChange = orgMembership
+      ? `Set ${member.githubUsername}'s organization role to ${orgRole}.`
+      : `Add ${member.githubUsername} to GitHub organization ${org} as ${orgRole}.`;
+    const teamChange = teamMembership
+      ? `Set ${member.githubUsername}'s ${teamSlug} team role to ${teamRole}.`
+      : `Add ${member.githubUsername} to GitHub team ${teamSlug} as ${teamRole}.`;
+    return { description: `${orgChange}\n${teamChange}` };
+  }
 
   async run(member: Member): Promise<TaskResult> {
     const teamSlug = GITHUB_TEAM[member.team];
