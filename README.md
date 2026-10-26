@@ -56,7 +56,7 @@ Set local build contexts in `.env.compose`, then run:
 make up-local
 ```
 
-This uses `docker-compose.build.yml` and rebuilds local images for Exec Dashboard, Kartana, and Membership Portal.
+This uses `docker-compose.local.yml` and rebuilds local images for Exec Dashboard, Kartana, and Membership Portal.
 
 ## Env ownership
 
