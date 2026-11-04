@@ -1,8 +1,9 @@
 name: Backend - Build & Deploy
 on:
   push:
-    branches: [ "master" ]
+    branches: [ "main" ]
     paths: "backend/**"
+  workflow_dispatch: # Enables the manual trigger button
 
 jobs:
   build-and-deploy:
