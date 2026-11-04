@@ -11,6 +11,10 @@ import { MemberEntity } from '@domain/member/member.entity';
       database: process.env.POSTGRES_DB,
       username: process.env.POSTGRES_USER,
       password: process.env.POSTGRES_PASSWORD,
+      ssl:
+        process.env.NODE_ENV === 'development'
+          ? false
+          : { rejectUnauthorized: false },
       entities: [MemberEntity],
       synchronize: true,
       autoLoadEntities: true,
