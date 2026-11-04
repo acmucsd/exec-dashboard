@@ -1,32 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { MemberAPI } from '@/lib/api'
+import { getErrorMessage } from '@/lib/utils'
+import type { Member, WorkflowPreview } from '@/lib/types/apiResponses'
+import type { MemberPayload } from '@/lib/types/apiRequests'
 import './App.css'
 
-type Member = {
-  id?: number
-  firstName: string
-  lastName: string
-  team: string
-  position: string
-  yearGraduating: number
-  email: string
-  acmEmail: string | null
-  githubUsername: string
-  discordUserId: string
-}
-
-type MemberForm = Omit<Member, 'id'>
+type MemberForm = MemberPayload
 type Toast = { id: number; kind: 'success' | 'error'; message: string }
-type WorkflowTaskPreview = {
-  taskId: string
-  label: string
-  description: string
-  requiresConfirmation: boolean
-}
-type WorkflowPreview = {
-  confirmationId: string
-  summary: string
-  tasks: WorkflowTaskPreview[]
-}
 type PendingChange =
   | {
       kind: 'create' | 'update'
@@ -35,24 +15,6 @@ type PendingChange =
       preview: WorkflowPreview
     }
   | { kind: 'delete'; memberId: number; preview: WorkflowPreview }
-
-const getErrorMessage = async (response: Response, fallback: string) => {
-  const body: unknown = await response.json().catch(() => null)
-  if (typeof body === 'object' && body !== null && 'message' in body) {
-    const message = body.message
-    if (typeof message === 'string') return message
-    if (Array.isArray(message)) return message.join(', ')
-  }
-  return fallback
-}
-
-const fetchMembers = async (): Promise<Member[]> => {
-  const response = await fetch('/api/members')
-  if (!response.ok) {
-    throw new Error(await getErrorMessage(response, 'Unable to load members'))
-  }
-  return (await response.json()) as Member[]
-}
 
 const emptyForm: MemberForm = {
   firstName: '',
@@ -102,19 +64,19 @@ function App() {
 
   const loadMembers = async () => {
     try {
-      setMembers(await fetchMembers())
+      setMembers(await MemberAPI.getAllMembers())
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Unexpected error', 'error')
+      showToast(getErrorMessage(err), 'error')
     } finally {
       setIsLoading(false)
     }
   }
 
   useEffect(() => {
-    void fetchMembers()
+    void MemberAPI.getAllMembers()
       .then(setMembers)
       .catch((err: unknown) => {
-        showToast(err instanceof Error ? err.message : 'Unexpected error', 'error')
+        showToast(getErrorMessage(err), 'error')
       })
       .finally(() => setIsLoading(false))
   }, [showToast])
@@ -142,21 +104,9 @@ function App() {
 
     setIsPreparing(true)
     try {
-      const response = editingId
-        ? await fetch(`/api/members/${editingId}/preview`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-          })
-        : await fetch('/api/members/preview', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-          })
-      if (!response.ok) {
-        throw new Error(await getErrorMessage(response, 'Unable to preview member changes'))
-      }
-      const preview = (await response.json()) as WorkflowPreview
+      const preview = editingId
+        ? await MemberAPI.previewUpdateMember(editingId, payload)
+        : await MemberAPI.previewCreateMember(payload)
       setPendingChange({
         kind: editingId ? 'update' : 'create',
         memberId: editingId,
@@ -164,7 +114,7 @@ function App() {
         preview,
       })
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Unexpected error', 'error')
+      showToast(getErrorMessage(err), 'error')
     } finally {
       setIsPreparing(false)
     }
@@ -190,16 +140,10 @@ function App() {
     if (id === undefined) return
     setIsPreparing(true)
     try {
-      const response = await fetch(`/api/members/${id}/delete-preview`, {
-        method: 'POST',
-      })
-      if (!response.ok) {
-        throw new Error(await getErrorMessage(response, 'Unable to preview member deletion'))
-      }
-      const preview = (await response.json()) as WorkflowPreview
+      const preview = await MemberAPI.previewDeleteMember(id)
       setPendingChange({ kind: 'delete', memberId: id, preview })
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Unexpected error', 'error')
+      showToast(getErrorMessage(err), 'error')
     } finally {
       setIsPreparing(false)
     }
@@ -208,43 +152,25 @@ function App() {
   const handleConfirmChange = async () => {
     if (!pendingChange) return
     setIsApplying(true)
-    const confirmationHeaders = {
-      'X-Workflow-Confirmation': pendingChange.preview.confirmationId,
-    }
+    const confirmationId = pendingChange.preview.confirmationId
 
     try {
-      const response =
-        pendingChange.kind === 'delete'
-          ? await fetch(`/api/members/${pendingChange.memberId}`, {
-              method: 'DELETE',
-              headers: confirmationHeaders,
-            })
-          : await fetch(
-              pendingChange.kind === 'update'
-                ? `/api/members/${pendingChange.memberId}`
-                : '/api/members',
-              {
-                method: pendingChange.kind === 'update' ? 'PATCH' : 'POST',
-                headers: {
-                  ...confirmationHeaders,
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(pendingChange.payload),
-              },
-            )
-
-      if (!response.ok) {
-        throw new Error(await getErrorMessage(response, 'Unable to apply member changes'))
-      }
-
       if (pendingChange.kind === 'delete') {
+        await MemberAPI.deleteMember(pendingChange.memberId, confirmationId)
         setMembers((current) =>
           current.filter((member) => member.id !== pendingChange.memberId),
         )
         if (editingId === pendingChange.memberId) resetForm()
         showToast('Member deleted successfully.', 'success')
       } else {
-        const savedMember = (await response.json()) as Member
+        const savedMember =
+          pendingChange.kind === 'update' && pendingChange.memberId !== null
+            ? await MemberAPI.updateMember(
+                pendingChange.memberId,
+                pendingChange.payload,
+                confirmationId,
+              )
+            : await MemberAPI.createMember(pendingChange.payload, confirmationId)
         const wasEditing = pendingChange.kind === 'update'
         setMembers((current) =>
           wasEditing
@@ -263,7 +189,7 @@ function App() {
       void loadMembers()
     } catch (err) {
       setPendingChange(null)
-      showToast(err instanceof Error ? err.message : 'Unexpected error', 'error')
+      showToast(getErrorMessage(err), 'error')
     } finally {
       setIsApplying(false)
     }
