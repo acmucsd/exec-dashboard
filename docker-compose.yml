@@ -9,7 +9,11 @@ services:
     volumes:
       - ./.docker-data/postgres:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-exec_dashboard} -d ${POSTGRES_DB:-exec_dashboard}"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-exec_dashboard} -d ${POSTGRES_DB:-exec_dashboard}",
+        ]
       interval: 5s
       timeout: 5s
       retries: 12
@@ -24,16 +28,15 @@ services:
     env_file:
       - ./backend/.env
     environment:
-      PORT: ${EXEC_BACKEND_PORT:-3001}
-      NODE_ENV: production
+      PORT: 3001
       POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432
       POSTGRES_DB: ${POSTGRES_DB:-exec_dashboard}
       POSTGRES_USER: ${POSTGRES_USER:-exec_dashboard}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_URL: postgres://${POSTGRES_USER:-exec_dashboard}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-exec_dashboard}
-      KARTANA_INTERNAL_URL: http://kartana:${KARTANA_INTERNAL_PORT:-8080}
-      MEMBERSHIP_PORTAL_INTERNAL_URL: http://membership-portal:${MEMBERSHIP_PORTAL_INTERNAL_PORT:-8080}
+      POSTGRES_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-exec_dashboard}
+      KARTANA_INTERNAL_URL: http://kartana:3001
+      MEMBERSHIP_PORTAL_INTERNAL_URL: http://membership-portal:3000
     depends_on:
       postgres:
         condition: service_healthy
@@ -42,7 +45,7 @@ services:
       membership-portal:
         condition: service_started
     ports:
-      - ${EXEC_BACKEND_HOST_PORT:-3001}:${EXEC_BACKEND_PORT:-3001}
+      - ${EXEC_BACKEND_HOST_PORT:-3001}:3001
     networks:
       - acm_internal
 
@@ -64,8 +67,10 @@ services:
     restart: unless-stopped
     env_file:
       - ${KARTANA_ENV_FILE:-./.env.kartana}
-    expose:
-      - ${KARTANA_INTERNAL_PORT:-8080}
+    environment:
+      # Pin the in-container listener so it always matches the fixed internal URL above,
+      # overriding any INTERNAL_API_PORT the user's env_file may set.
+      INTERNAL_API_PORT: 3001
     networks:
       - acm_internal
 
@@ -79,12 +84,12 @@ services:
       RDS_PORT: 5432
       RDS_DATABASE: ${POSTGRES_DB:-exec_dashboard}
       RDS_USER: ${POSTGRES_USER:-exec_dashboard}
-      RDS_PASSWORD: ${POSTGRES_PASSWORD}
+      RDS_PASSWORD: ${POSTGRES_PASSWORD:-exec_dashboard}
+      # Pin the in-container listener so it always matches the fixed internal URL above.
+      PORT: 3000
     depends_on:
       postgres:
         condition: service_healthy
-    expose:
-      - ${MEMBERSHIP_PORTAL_INTERNAL_PORT:-8080}
     networks:
       - acm_internal
 

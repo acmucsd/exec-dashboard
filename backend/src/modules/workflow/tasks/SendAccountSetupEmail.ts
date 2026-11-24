@@ -3,7 +3,7 @@ import { accountSetupTemplate } from '../templates/accountSetupEmail';
 import { Member } from '@t/Member';
 import { Task, TaskPreview, TaskResult } from '@modules/workflow/types/Task';
 import { sesClient } from '../clients/ses';
-import { toError } from '@lib/error';
+import { redactError } from '@lib/error';
 
 /*
 Returns true if account setup email was sent correctly.
@@ -63,7 +63,7 @@ export default class SendAccountSetupEmail extends Task {
       });
     } catch (err) {
       return this.TaskFailure({
-        error: toError(err),
+        error: redactError(err, tempPassword),
         feedback: `Failed to send account setup email to ${toEmail}.`,
       });
     }

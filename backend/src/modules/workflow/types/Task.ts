@@ -1,4 +1,5 @@
 import { Member } from '../../../types/Member';
+import type { TaskId } from '../taskRegistry';
 
 export type TaskResult =
   | {
@@ -19,7 +20,7 @@ export type TaskPreview = {
 };
 
 export type WorkflowTaskPreview = TaskPreview & {
-  taskId: string;
+  taskId: TaskId;
   label: string;
   requiresConfirmation: boolean;
 };

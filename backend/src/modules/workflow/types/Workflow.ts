@@ -16,11 +16,12 @@ export class WorkflowDefinition {
   }
 }
 
-export type LoadMember = (id: number) => Promise<Member>;
+export type LoadMember = (id: number, taskId?: TaskId) => Promise<Member>;
 
-export type PersistMemberPatch = (
+export type OnTaskSuccess = (
   member: Member,
-  patch: Partial<Member>,
+  taskId: TaskId,
+  patch?: Partial<Member>,
 ) => Promise<void>;
 
 export class Workflow {
@@ -30,15 +31,15 @@ export class Workflow {
     // initial call
     member: Member,
     loadMember: LoadMember,
-    persistMemberPatch: PersistMemberPatch,
+    onTaskSuccess: OnTaskSuccess,
   ): Promise<Member> {
-    const memberId = member.id;
-    await Promise.all(
-      this.workflowSteps.map((step) =>
-        this.executeStep(step, memberId, loadMember, persistMemberPatch),
-      ),
+    await this.executeSteps(
+      this.workflowSteps,
+      member.id,
+      loadMember,
+      onTaskSuccess,
     );
-    return loadMember(memberId);
+    return loadMember(member.id);
   }
 
   async preview(member: Member): Promise<WorkflowTaskPreview[]> {
@@ -79,14 +80,30 @@ export class Workflow {
     return [taskPreview, ...nextPreviews.flat()];
   }
 
+  private async executeSteps(
+    steps: WorkflowStepDefinition[],
+    memberId: number,
+    loadMember: LoadMember,
+    onTaskSuccess: OnTaskSuccess,
+  ): Promise<void> {
+    const started = steps.map((step) =>
+      this.executeStep(step, memberId, loadMember, onTaskSuccess),
+    );
+    try {
+      await Promise.all(started);
+    } catch (error) {
+      await Promise.allSettled(started);
+      throw error;
+    }
+  }
+
   private async executeStep(
-    // each step, recursive
     step: WorkflowStepDefinition,
     memberId: number,
     loadMember: LoadMember,
-    persistMemberPatch: PersistMemberPatch,
+    onTaskSuccess: OnTaskSuccess,
   ): Promise<void> {
-    const member = await loadMember(memberId);
+    const member = await loadMember(memberId, step.taskId);
     const task = TaskRegistry.getTask(step.taskId);
     const result = await task.run(member);
 
@@ -96,16 +113,9 @@ export class Workflow {
       );
     }
 
-    if (result.memberPatch) {
-      await persistMemberPatch(member, result.memberPatch);
-    }
-
+    await onTaskSuccess(member, step.taskId, result.memberPatch);
     if (step.next) {
-      await Promise.all(
-        step.next.map((next) =>
-          this.executeStep(next, memberId, loadMember, persistMemberPatch),
-        ),
-      );
+      await this.executeSteps(step.next, memberId, loadMember, onTaskSuccess);
     }
   }
 }

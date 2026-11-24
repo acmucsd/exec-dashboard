@@ -1,5 +1,5 @@
 import { googleAdminClient } from '../clients/google';
-import { toError } from '@lib/error';
+import { redactError, toError } from '@lib/error';
 import { Member } from '@t/Member';
 import { Task, TaskResult } from '@modules/workflow/types/Task';
 
@@ -62,6 +62,7 @@ export default class CreateOrgEmail extends Task {
       });
     }
 
+    let tempPassword: string | undefined;
     try {
       const existingRes = await googleAdminClient.users.list({
         domain: process.env.GOOGLE_DOMAIN,
@@ -88,7 +89,7 @@ export default class CreateOrgEmail extends Task {
       }
 
       const acmEmail = `${username}@${process.env.GOOGLE_DOMAIN}`;
-      const tempPassword = crypto.randomUUID();
+      tempPassword = crypto.randomUUID();
 
       await googleAdminClient.users.insert({
         requestBody: {
@@ -111,7 +112,7 @@ export default class CreateOrgEmail extends Task {
       });
     } catch (err) {
       return this.TaskFailure({
-        error: toError(err),
+        error: tempPassword ? redactError(err, tempPassword) : toError(err),
         feedback: `Failed to create email for ${fullName}.`,
       });
     }

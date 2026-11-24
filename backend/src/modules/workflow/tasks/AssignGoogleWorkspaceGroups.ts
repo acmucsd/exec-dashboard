@@ -80,6 +80,13 @@ export default class AssignGoogleWorkspaceGroups extends Task {
   }
 
   async run(member: Member): Promise<TaskResult> {
+    if (!member.acmEmail) {
+      return this.TaskSuccess({
+        feedback:
+          'No Google Workspace group changes; an ACM email is unavailable.',
+      });
+    }
+
     const groupEmails = this.groupEmails(member);
 
     for (const groupEmail of groupEmails) {

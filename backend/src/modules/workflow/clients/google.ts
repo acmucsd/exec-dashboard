@@ -1,6 +1,7 @@
 import { google, gmail_v1, admin_directory_v1 } from 'googleapis';
 
 const auth = new google.auth.GoogleAuth({
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   credentials: JSON.parse(process.env.GOOGLE_CREDENTIALS!),
   scopes: [
     'https://www.googleapis.com/auth/admin.directory.user',
