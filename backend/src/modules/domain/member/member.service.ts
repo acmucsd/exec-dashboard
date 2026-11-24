@@ -7,6 +7,7 @@ import { randomUUID } from 'node:crypto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MemberEntity } from './member.entity';
+import type { CreateMemberBody, PatchMemberBody } from './member.pipes';
 import { Member } from '@t/Member';
 import { WorkflowService } from '@modules/workflow/workflow.service';
 import { WorkflowTaskPreview } from '@modules/workflow/types/Task';
@@ -21,7 +22,10 @@ type PendingConfirmation = {
 
 @Injectable()
 export class MemberService {
-  private readonly pendingConfirmations = new Map<string, PendingConfirmation>();
+  private readonly pendingConfirmations = new Map<
+    string,
+    PendingConfirmation
+  >();
 
   constructor(
     @InjectRepository(MemberEntity)
@@ -43,16 +47,30 @@ export class MemberService {
     return member;
   }
 
-  async previewCreate(memberDraft: Omit<Member, 'id'>) {
+  async previewCreate(memberDraft: CreateMemberBody) {
     const member = { ...memberDraft, id: 0 } as Member;
     const tasks = await this.workflowService.previewCreateMember(member);
-    return this.issueConfirmation('create', null, memberDraft, tasks, `Create ${member.firstName} ${member.lastName}.`);
+    return this.issueConfirmation(
+      'create',
+      null,
+      memberDraft,
+      tasks,
+      `Create ${member.firstName} ${member.lastName}.`,
+    );
   }
 
-  async previewUpdate(id: number, memberPatch: Partial<Member>) {
+  async previewUpdate(id: number, memberPatch: PatchMemberBody) {
     const member = Object.assign(await this.findOne(id), memberPatch);
-    const tasks = await this.workflowService.previewUpdateMember(member as Member);
-    return this.issueConfirmation('update', id, memberPatch, tasks, `Update ${member.firstName} ${member.lastName}.`);
+    const tasks = await this.workflowService.previewUpdateMember(
+      member as Member,
+    );
+    return this.issueConfirmation(
+      'update',
+      id,
+      memberPatch,
+      tasks,
+      `Update ${member.firstName} ${member.lastName}.`,
+    );
   }
 
   async previewRemove(id: number) {
@@ -67,12 +85,12 @@ export class MemberService {
   }
 
   async create(
-    memberToBeCreated: Member,
+    memberToBeCreated: CreateMemberBody,
     confirmationId?: string,
   ): Promise<MemberEntity> {
     this.consumeConfirmation('create', null, memberToBeCreated, confirmationId);
     const member = this.memberRepository.create(
-      memberToBeCreated as MemberEntity,
+      memberToBeCreated as Partial<MemberEntity>,
     );
     const saved = await this.memberRepository.save(member);
     await this.workflowService.createMember(saved as Member);
@@ -81,7 +99,7 @@ export class MemberService {
 
   async update(
     id: number,
-    memberPatch: Partial<Member>,
+    memberPatch: PatchMemberBody,
     confirmationId?: string,
   ): Promise<MemberEntity> {
     this.consumeConfirmation('update', id, memberPatch, confirmationId);

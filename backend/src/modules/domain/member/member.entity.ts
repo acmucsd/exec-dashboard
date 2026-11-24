@@ -1,5 +1,16 @@
 import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 
+export type PendingSnapshotWorkflow =
+  | { stage: 'sync_pending' }
+  | { stage: 'provisioning_pending' }
+  | { stage: 'setup_email_pending'; acmEmail: string; recipientEmail: string };
+
+export const INTERNAL_MEMBER_FIELDS = [
+  'setupPassword',
+  'pendingSnapshotWorkflow',
+  'snapshotRecovery',
+] as const;
+
 @Entity({ name: 'members' })
 export class MemberEntity {
   @PrimaryGeneratedColumn()
@@ -28,6 +39,9 @@ export class MemberEntity {
 
   @Column({ type: 'varchar', length: 128, nullable: true, select: false })
   setupPassword: string | null;
+
+  @Column({ type: 'jsonb', nullable: true, select: false })
+  pendingSnapshotWorkflow: PendingSnapshotWorkflow | null;
 
   @Column({ type: 'varchar', length: 128, nullable: true })
   githubUsername: string;

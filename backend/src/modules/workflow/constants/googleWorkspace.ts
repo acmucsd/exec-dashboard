@@ -1,4 +1,4 @@
-import { ACMCommunity, ACMTeam } from '@t/ACM';
+import { ACMTeam } from '@t/ACM';
 
 export const GW_GROUP_BOARD = 'acm-board@acmucsd.org';
 export const GW_GROUP_EXEC = 'acm-executive@acmucsd.org';

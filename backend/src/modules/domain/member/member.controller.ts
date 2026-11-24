@@ -11,11 +11,40 @@ import {
 } from '@nestjs/common';
 import { MemberService } from './member.service';
 import { MemberEntity } from './member.entity';
-import { type Member } from '@t/Member';
+import { MemberSnapshotService } from './snapshot/memberSnapshot.service';
+import {
+  createMemberBodyPipe,
+  patchMemberBodyPipe,
+  type CreateMemberBody,
+  type PatchMemberBody,
+} from './member.pipes';
+import type { MemberSnapshot } from './snapshot/memberSnapshot';
+import { memberSnapshotBodyPipe } from './snapshot/memberSnapshot.pipes';
 
 @Controller('members')
 export class MemberController {
-  constructor(private readonly membersService: MemberService) {}
+  constructor(
+    private readonly membersService: MemberService,
+    private readonly memberSnapshotService: MemberSnapshotService,
+  ) {}
+
+  @Get('snapshot')
+  exportSnapshot() {
+    return this.memberSnapshotService.buildSnapshot();
+  }
+
+  @Post('snapshot/preview')
+  previewSnapshot(@Body(memberSnapshotBodyPipe) snapshot: MemberSnapshot) {
+    return this.memberSnapshotService.preview(snapshot);
+  }
+
+  @Post('snapshot/apply')
+  applySnapshot(
+    @Body(memberSnapshotBodyPipe) snapshot: MemberSnapshot,
+    @Headers('x-workflow-confirmation') confirmationId?: string,
+  ) {
+    return this.memberSnapshotService.apply(snapshot, confirmationId);
+  }
 
   @Get()
   findAll(): Promise<MemberEntity[]> {
@@ -29,7 +58,7 @@ export class MemberController {
 
   @Post('preview')
   previewCreate(
-    @Body() memberToBeCreated: Omit<Member, 'id'>,
+    @Body(createMemberBodyPipe) memberToBeCreated: CreateMemberBody,
   ): Promise<unknown> {
     return this.membersService.previewCreate(memberToBeCreated);
   }
@@ -37,7 +66,7 @@ export class MemberController {
   @Post(':id/preview')
   previewUpdate(
     @Param('id', ParseIntPipe) id: number,
-    @Body() updateMemberDto: Partial<Member>,
+    @Body(patchMemberBodyPipe) updateMemberDto: PatchMemberBody,
   ): Promise<unknown> {
     return this.membersService.previewUpdate(id, updateMemberDto);
   }
@@ -49,7 +78,7 @@ export class MemberController {
 
   @Post()
   create(
-    @Body() memberToBeCreated: Member,
+    @Body(createMemberBodyPipe) memberToBeCreated: CreateMemberBody,
     @Headers('x-workflow-confirmation') confirmationId?: string,
   ): Promise<MemberEntity> {
     return this.membersService.create(memberToBeCreated, confirmationId);
@@ -58,7 +87,7 @@ export class MemberController {
   @Patch(':id')
   update(
     @Param('id', ParseIntPipe) id: number,
-    @Body() updateMemberDto: Partial<Member>,
+    @Body(patchMemberBodyPipe) updateMemberDto: PatchMemberBody,
     @Headers('x-workflow-confirmation') confirmationId?: string,
   ): Promise<MemberEntity> {
     return this.membersService.update(id, updateMemberDto, confirmationId);

@@ -57,6 +57,9 @@ const getKartanaPreview = async (
   );
 };
 
+const skippedAssignment =
+  'No Kartana role changes; a Discord ID is unavailable.';
+
 export default class AssignKartanaRoles extends Task {
   label = 'Assign Discord roles through Kartana';
   requiresConfirmation = true;
@@ -64,7 +67,7 @@ export default class AssignKartanaRoles extends Task {
   async preview(member: Member) {
     const username = member.discordUserId;
     if (!username) {
-      throw new Error('A Discord username is required to preview Kartana roles.');
+      return { description: skippedAssignment, requiresConfirmation: false };
     }
     const requestBody = JSON.stringify({
       username,
@@ -96,7 +99,9 @@ export default class AssignKartanaRoles extends Task {
       );
     }
     if (preview.message.startsWith('No guild member found')) {
-      throw new Error(`Kartana could not find the Discord user: ${preview.message}`);
+      throw new Error(
+        `Kartana could not find the Discord user: ${preview.message}`,
+      );
     }
 
     const assigned = preview.assigned.filter(Boolean);
@@ -112,13 +117,13 @@ export default class AssignKartanaRoles extends Task {
 
   async run(member: Member): Promise<TaskResult> {
     const username = member.discordUserId;
+    if (!username) {
+      return this.TaskSuccess({ feedback: skippedAssignment });
+    }
     const team = member.team;
     const position = member.position;
 
     try {
-      if (!username) {
-        throw new Error('A Discord username is required to assign Kartana roles.');
-      }
       const response = await fetch(
         `${process.env.KARTANA_INTERNAL_URL}/assign`,
         {
@@ -135,7 +140,7 @@ export default class AssignKartanaRoles extends Task {
         console.error('Kartana error body:', errorBody);
         throw new Error(`Kartana returned ${response.status}: ${errorBody}`);
       }
-      const { success }: KartanaAssignResponse = await response.json();
+      const { success } = (await response.json()) as KartanaAssignResponse;
 
       if (!success) {
         throw new Error(

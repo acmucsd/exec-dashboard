@@ -32,7 +32,8 @@
 		"pg": "^8.11.2",
 		"reflect-metadata": "^0.2.2",
 		"rxjs": "^7.8.1",
-		"typeorm": "^0.3.30"
+		"typeorm": "^0.3.30",
+		"zod": "^4.6.7"
 	},
 	"devDependencies": {
 		"@eslint/eslintrc": "^3.2.0",
@@ -66,6 +67,11 @@
 			"ts"
 		],
 		"rootDir": "src",
+		"moduleNameMapper": {
+			"^@t/(.*)$": "<rootDir>/types/$1",
+			"^@lib/(.*)$": "<rootDir>/lib/$1",
+			"^@modules/(.*)$": "<rootDir>/modules/$1"
+		},
 		"testRegex": ".*\\.spec\\.ts$",
 		"transform": {
 			"^.+\\.(t|j)s$": "ts-jest"

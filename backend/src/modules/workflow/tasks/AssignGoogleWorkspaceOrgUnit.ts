@@ -46,10 +46,15 @@ export default class AssignGoogleWorkspaceOrgUnit extends Task {
 
   async run(member: Member): Promise<TaskResult> {
     const orgUnit = GW_ORG_TEAM[member.team];
+    if (!member.acmEmail) {
+      return this.TaskSuccess({
+        feedback: `No ACM email is available to move to ${orgUnit}.`,
+      });
+    }
 
     try {
       await googleAdminClient.users.update({
-        userKey: member.acmEmail!,
+        userKey: member.acmEmail,
         requestBody: {
           orgUnitPath: orgUnit,
         },
